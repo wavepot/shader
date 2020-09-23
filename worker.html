@@ -1,0 +1,108 @@
+<html>
+  <head>
+    <title>shader</title>
+  </head>
+  <body style="background: #000; margin:0; padding:0;">
+    <script type="module">
+import * as GL from './gl.js'
+import Shader from './shader.js'
+
+import Audio from './sources/audio-service.js'
+import Webcam from './sources/webcam-service.js'
+import Youtube from './sources/youtube-service.js'
+
+const canvas = document.createElement('canvas')
+const scale = 2
+const width = canvas.width = window.innerWidth/scale
+const height = canvas.height = window.innerHeight/scale
+canvas.style.width = width*scale + 'px'
+canvas.style.height = height*scale + 'px'
+canvas.style.position = 'absolute'
+canvas.style.imageRendering = 'pixelated'
+document.body.appendChild(canvas)
+
+const pixelRatio = window.devicePixelRatio
+
+const main = async () => {
+  let animFrame
+
+  let stop = () => {}
+
+  const methods = {
+    sourcecall ({ name, method, params }) {
+      sources[name][method](...params)
+    },
+    onerror (error) {
+      console.error(error.error ?? error)
+      stop()
+    }
+  }
+
+  const workerUrl = new URL('shader-worker.js', import.meta.url).href
+  const worker = new Worker(workerUrl, { type: 'module' })
+  worker.onmessage = ({ data }) => methods[data.call](data)
+  worker.onmessageerror = error => methods.onerror(error)
+  worker.onerror = error => methods.onerror(error)
+
+  const sources = {
+    audio: Audio(worker, { size: 1024, depth: 60*8, src: './music/alpha_molecule.ogg', start: 43 }),
+    webcam: await Webcam(worker),
+    youtube: Youtube(worker),
+  }
+
+  let frame = 0
+  const tick = () => {
+    if (frame % 2 === 0) { // videos only need <30fps
+      sources.webcam.update()
+      sources.youtube.update()
+    }
+    sources.audio.update()
+    frame++
+  }
+
+  stop = () => {
+    Object.values(sources).forEach(s => s.stop?.())
+    cancelAnimationFrame(animFrame)
+    worker.postMessage({
+      call: 'stop'
+    })
+  }
+
+  const render = () => {
+    animFrame = requestAnimationFrame(render)
+    tick()
+  }
+  animFrame = requestAnimationFrame(render)
+
+  document.body.onclick = () => stop()
+
+  const offscreen = canvas.transferControlToOffscreen()
+  worker.postMessage({
+    call: 'setup',
+    canvas: offscreen,
+    pixelRatio,
+  }, [offscreen])
+
+  worker.postMessage({
+    call: 'load',
+    filename: new URL('test-cg.js', import.meta.url).href,
+  })
+
+  window.onresize = () => {
+    const width = window.innerWidth
+    const height = window.innerHeight
+    worker.postMessage({
+      call: 'onresize',
+      width: width/scale,
+      height: height/scale,
+    })
+    canvas.style.width = width + 'px'
+    canvas.style.height = height + 'px'
+  }
+}
+
+document.body.addEventListener('click', main, { once: true })
+
+</script>
+</body>
+</html>
