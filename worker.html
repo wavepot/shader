@@ -45,7 +45,7 @@ const main = async () => {
   worker.onerror = error => methods.onerror(error)
 
   const sources = {
-    audio: Audio(worker, { size: 1024, depth: 60*8, src: './music/alpha_molecule.ogg', start: 43 }),
+    // audio: Audio(worker, { size: 1024, depth: 60*8, src: './music/alpha_molecule.ogg', start: 43 }),
     webcam: await Webcam(worker),
     youtube: Youtube(worker),
   }
@@ -56,7 +56,7 @@ const main = async () => {
       sources.webcam.update()
       sources.youtube.update()
     }
-    sources.audio.update()
+    // sources.audio.update()
     frame++
   }
 

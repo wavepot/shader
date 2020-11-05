@@ -13,7 +13,10 @@ export default gl => {
     GL.putTexture1(gl, video)
     video.update = () => {
     // console.log(video)
-      GL.putSubTexture1(gl, video)
+      if (video.data !== video.prevData) {
+        video.prevData = video.data
+        GL.putSubTexture1(gl, video)
+      }
     }
   }
 

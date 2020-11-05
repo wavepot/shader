@@ -1,4 +1,4 @@
-export const getContext = (canvas, { alpha = false, antialias = false } = {}) => {
+export const getContext = (canvas, { alpha = true, antialias = false } = {}) => {
   const gl = canvas.getContext('webgl2', { alpha, antialias })
   gl.getExtension('EXT_color_buffer_float')
   return gl
@@ -442,12 +442,13 @@ export const compileModule = (gl, context, program) => {
       }
     }
     draw(gl, {
+      ...opts,
+      ...c,
       textures: opts.textures ?? opts.texturesFn?.(c) ?? [],
       uniforms: {
         ...(opts.draw?.(c, c, c) ?? {}),
         ...context.uniforms,
       },
-      ...opts,
       fbo: c.fbo
     })
   }

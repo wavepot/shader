@@ -1,10 +1,27 @@
 import * as GL from '../gl.js'
+import { getFetchUrl } from '../../server-api.js'
 
-export default (gl, opts) => {
-  const video = document.createElement('video')
-  video.volume = 0.000000000000001
+const Protocol = {
+  youtube: {
+    setup (v, url) {
+      v.crossOrigin = 'anonymous'
+      v.autoplay = true
+      v.loop = true
+    },
+    src: url => getFetchUrl(url)
+  }
+}
 
-  opts?.setup(video)
+const video = document.createElement('video')
+video.volume = 0.000000000000001
+
+export default (gl, url) => {
+  const [protocol, id] = url.split(':')
+
+  Protocol[protocol].setup(video, url)
+
+  let src = Protocol[protocol].src(url)
+  video.src = src
 
   const target = gl.TEXTURE_2D
 
@@ -15,7 +32,10 @@ export default (gl, opts) => {
   const noop = () => {}
 
   const updateVideo = () => {
-    GL.putSubTexture1(gl, {
+    if (video.readyState < 2) return
+    // NOTE: this used to be putSubTexture1
+    // but turns out putTexture1 is 4x-5x faster
+    GL.putTexture1(gl, {
       texture,
       data: video,
       // flipY: true
@@ -29,6 +49,7 @@ export default (gl, opts) => {
   }
 
   video.onplaying = e => {
+    if (video.readyState < 2) return
     GL.putTexture1(gl, {
       texture,
       data: video,
@@ -42,22 +63,18 @@ export default (gl, opts) => {
 
   const stop = () => {
     video.pause()
-    opts.stop?.(video)
+    // opts.stop?.(video)
   }
 
-  const methods = Object.fromEntries(
-    Object.entries(opts.methods ?? {})
-      .map(([key, method]) => [
-        key,
-        (...args) => method(video, ...args)
-      ]))
-
   return {
-    ...methods,
     video,
     target,
     texture,
     update,
-    stop
+    stop,
+    set (newUrl) {
+      let src = Protocol[protocol].src(url)
+      video.src = src
+    }
   }
 }

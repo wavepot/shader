@@ -5,7 +5,7 @@ export default c => ({
   }),
   draw: c => ({
     't': ['1f', c.time],
-    'speed': ['1f', c.speed],
+    'speed': ['1f', c.speed ?? 1],
   }),
   vertex: `
     #version 300 es

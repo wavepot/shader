@@ -4,9 +4,6 @@ export default c => ({
     'layer_a': c.a.screen,
     'layer_b': c.b.screen,
   }),
-  draw: c => ({
-    'shift': ['2fv', c.shift ?? [0,0]],
-  }),
   vertex: `
     #version 300 es
 
@@ -30,18 +27,16 @@ export default c => ({
     uniform sampler2D layer_a;
     uniform sampler2D layer_b;
 
-    uniform vec2 shift;
-
     in vec2 v_texCoord;
 
     out vec4 fragColor;
 
     void main () {
       vec4 A = texture(layer_a, v_texCoord);
-      vec4 B = texture(layer_b, v_texCoord + shift);
+      vec4 B = texture(layer_b, v_texCoord);
 
-      fragColor.a = B.a+A.a - A.a*B.a;
-      fragColor.rgb = (A.rgb * A.a * (1. - B.a) + B.rgb * B.a);
+      fragColor.a = A.a + B.a; //B.a+A.a - A.a*B.a;
+      fragColor.rgb = A.rgb + B.rgb; //(A.rgb * A.a * (1. - B.a) + B.rgb * B.a);
     }
   `
 })

@@ -1,0 +1,185 @@
+<html>
+  <head>
+    <title>shader</title>
+  </head>
+  <body style="background: #000; margin:0; padding:0;">
+    <script type="module">
+import * as GL from './gl.js'
+import Shader from './shader-new.js'
+
+import Audio from './sources/audio.js'
+import Noise from './sources/noise.js'
+import Webcam from './sources/webcam.js'
+import Youtube from './sources/youtube.js'
+
+const canvas = document.createElement('canvas')
+const scale = 2
+const width = canvas.width = window.innerWidth/scale
+const height = canvas.height = window.innerHeight/scale
+canvas.style.width = width*scale + 'px'
+canvas.style.height = height*scale + 'px'
+canvas.style.position = 'absolute'
+canvas.style.imageRendering = 'pixelated'
+document.body.appendChild(canvas)
+
+const gl = GL.getContext(canvas)
+
+const pixelRatio = window.devicePixelRatio
+
+const main = async () => {
+  let animFrame
+
+  // sources
+  const sources = {
+    // audio: Audio(gl, { size: 1024, depth: 60*8, src: './music/alpha_molecule.ogg', start: 43 }),
+    webcam: Webcam(gl),
+    youtube: Youtube(gl),
+    noise64: Noise(gl, { size: 64 }),
+    noise256: Noise(gl, { size: 256 }),
+  }
+
+  const buffers = {
+    quad: [
+      new Int16Array([
+        -1, -1, 0, 0,
+        -1,  1, 0, 1,
+         1, -1, 1, 0,
+         1,  1, 1, 1,
+      ]), {
+      'a_pos': { stride: 8 },
+      'a_st': { stride: 8, offset: 4 },
+      }],
+  }
+
+  const cg = Shader({ gl, canvas, buffers, sources })
+
+  const g = Object.fromEntries(await Promise.all([
+    'webcam',
+    'youtube',
+    // 'oscilloscope',
+    // 'spectrogram',
+    // 'waveform',
+    'pixelmess',
+    'glitch',
+    'rotate',
+    'wobble',
+    'mirror',
+    'pixelmess',
+  ].map(async (name) => {
+    const mod = await import(`./programs/${name}.js`)
+    return [name, GL.compileModule(gl, cg, mod.default)]
+  })))
+
+  const videos = [
+    'oHg5SJYRHA0', // rickroll
+    'FJ3N_2r6R-o', // hitler
+    'guVAeFs5XwE', // neo
+  ]
+
+  const tick = (c) => {
+    c.before()
+
+    const out = { ...cg }
+    c.moveDown(out)
+
+    const a = { ...cg }
+    c.moveDown(a)
+
+    g.youtube(a)
+
+    // c.moveSide(a)
+    // g.mirror(a, { times: (Math.sin(c.t*.2)/2+.6)*4.5 })
+
+    c.moveSide(a)
+    g.pixelmess(a, { size: window.innerHeight/3/2 })
+
+    c.moveSide(a)
+    g.glitch(a)
+
+    c.moveUp(out, a)
+
+
+    const b = { ...cg }
+    c.moveDown(b)
+
+    g.webcam(b)
+
+    // c.moveSide(b)
+    // g.glitch(b)
+
+    c.moveSide(b)
+    g.pixelmess(b)
+
+    c.moveSide(b)
+    g.wobble(b)
+    // g.wobble(b, { speed: 1 })
+    // c.moveSide(b)
+    // c.moveUp(cg, b)
+
+    // c.moveSide(out)
+    c.moveUp(out, b)
+    // c.moveSide(out)
+    // c.moveSide(b)
+
+    c.moveUp(cg, out)
+    // c.merge(a, b)
+    // cg(
+    //   c => c(
+    //     c => c(
+    //       c => g.youtube(c),
+    //       c => g.mirror(c, { times: (Math.sin(c.t*.2)/2+.6)*4.5 }),
+    //     ),
+    //     c => c(
+    //       c => g.webcam(c),
+    //       c => g.pixelmess(c, { size: 20 }),
+    //       c => g.wobble(c, { speed: 1 }),
+    //     ),
+    //     c => g.spectrogram(c),
+    //     // c => c(c => g.spectrogram(c)),
+    //     c => g.glitch(c),
+    //   ),
+    //   c => g.oscilloscope(c)
+    // )
+
+    if (c.frame % 2 === 0) { // videos only need 30fps
+      c.sources.webcam.update()
+      c.sources.youtube.update()
+    }
+    // c.sources.audio.update()
+
+    if (c.frame === 0 || (c.frame % (60*3) === 0 && Math.random() > .5)) {
+      c.sources.youtube.set(videos[Math.random() * videos.length | 0])
+    }
+
+    if (c.frame % 4 == 0) {
+      c.sources.noise64.update()
+      c.sources.noise256.update()
+    }
+  }
+
+  const stop = () => {
+    Object.values(sources).forEach(s => s.stop?.())
+    cancelAnimationFrame(animFrame)
+  }
+
+  const render = ms => {
+    cg.t = cg.time = ms*0.001
+
+    tick(cg)
+
+    cg.n = ++cg.frame
+
+    animFrame = requestAnimationFrame(render)
+  }
+
+  animFrame = requestAnimationFrame(render)
+
+  document.body.ondblclick = () => stop()
+}
+
+document.body.addEventListener('click', main, { once: true })
+
+</script>
+<textarea style="z-index:1000;position:absolute;"></textarea>
+</body>
+</html>

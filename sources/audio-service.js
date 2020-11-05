@@ -8,13 +8,13 @@ const fetchAudioBuffer = async (audio, url) => {
   return audioBuffer
 }
 
-export default (worker, { size = 1024, depth = 60*8, src = null, start = 0 } = {}) => {
+export default (worker, { source, size = 1024, depth = 60*8, src = null, start = 0 } = {}) => {
   const audio = {
     size,
     depth,
   }
 
-  audio.analyser = createAnalyser({ size })
+  audio.analyser = createAnalyser({ source, size })
 
   audio.stop = () => {}
 

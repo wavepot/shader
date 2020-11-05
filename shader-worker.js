@@ -9,6 +9,7 @@ const Sources = gl => {
   sources.audio = Audio(gl)
   sources.webcam = Video(gl)
   sources.youtube = Video(gl)
+  sources.editor = Video(gl)
   sources.noise64 = Noise(gl, { size: 64 })
   sources.noise256 = Noise(gl, { size: 256 })
 
@@ -41,6 +42,8 @@ const Buffers = gl => {
   return buffers
 }
 
+let v = 0
+
 const worker = {
   setup (opts) {
     worker.opts = opts
@@ -52,35 +55,49 @@ const worker = {
   },
 
   async load ({ filename }) {
-    try {
-      worker.filename = filename
+  // try {
+    worker.filename = filename
 
-      worker.cg.import = async (modules) =>
-        Object.fromEntries(await Promise.all(modules.map(async (name) => {
-          const mod = await import(`./programs/${name}.js`)
-          return [name, GL.compileModule(worker.gl, worker.cg, mod.default)]
-        })))
+    v++ // cache bust
 
-      const mod = await import(filename)
+    worker.cg.import = async (modules) =>
+      Object.fromEntries(await Promise.all(modules.map(async (name) => {
+        const path = new URL('programs/' + name + '.js', worker.filename).href
+        const mod = await import(path + '?v=' + v)
+        return [name, GL.compileModule(worker.gl, worker.cg, mod.default)]
+      })))
 
-      const fn = await mod.default(worker.cg)
+    const mod = await import(filename + '?v=' + v)
 
-      const tick = ms => {
-        worker.animFrame = requestAnimationFrame(tick)
-        worker.cg.t = worker.cg.time = ms*0.001
-        worker.cg.n = worker.cg.frame
-        try {
-          fn(worker.cg)
-        } catch (error) {
-          worker.onerror({ error })
-        }
-        worker.cg.frame++
-      }
-      worker.stop()
-      worker.animFrame = requestAnimationFrame(tick)
-    } catch (error) {
-      worker.onerror({ error })
+    worker.fn = await mod.default(worker.cg)
+
+    worker.tick = ms => {
+      worker.animFrame = requestAnimationFrame(worker.tick)
+      worker.cg.t = worker.cg.time = ms*0.001
+      worker.cg.n = worker.cg.frame
+      // if (worker.cg.n % 3 === 0) {
+
+      // try {
+      worker.fn(worker.cg)
+      // }
+      // } catch (error) {
+        // worker.onerror({ error })
+      // }
+      worker.cg.frame++
     }
+
+    worker.start()
+  // } catch (error) {
+    // worker.onerror({ error })
+  // }
+  },
+
+  start () {
+    worker.stop()
+    if (!worker.tick) {
+      return setTimeout(worker.start, 500)
+    }
+    worker.animFrame = requestAnimationFrame(worker.tick)
   },
 
   stop () {
@@ -88,7 +105,7 @@ const worker = {
   },
 
   onerror ({ error }) {
-    worker.stop()
+    // worker.stop()
     postMessage({ call: 'onerror', error })
   },
 

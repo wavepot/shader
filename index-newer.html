@@ -1,0 +1,114 @@
+<html>
+  <head>
+    <title>shader</title>
+  </head>
+  <body style="background: #000; margin:0; padding:0;">
+    <script type="module">
+import * as GL from './gl.js'
+import Shader from './shader.js'
+
+const canvas = document.createElement('canvas')
+const scale = 2
+const width = canvas.width = window.innerWidth/scale
+const height = canvas.height = window.innerHeight/scale
+canvas.style.width = width*scale + 'px'
+canvas.style.height = height*scale + 'px'
+canvas.style.position = 'absolute'
+canvas.style.imageRendering = 'pixelated'
+document.body.appendChild(canvas)
+
+self.t = 0
+
+Array.prototype.seq = function (x=1) {
+  let N = this.length
+  return this[(( (t*(1/(x*4))) % N + N) % N)|0]
+}
+
+const main = async () => {
+  let animFrame
+
+  const shader = new Shader(canvas)
+
+  const videos = [
+    'oHg5SJYRHA0', // rickroll
+    'FJ3N_2r6R-o', // hitler
+    'guVAeFs5XwE', // neo
+  ]
+
+  const tick = () => {
+    screens.main = screens[0]
+    screens[1].yt(['FJ3N_2r6R-o','guVAeFs5XwE','oHg5SJYRHA0'].seq(1/4)).glitch().out()
+    screens.main.draw()
+    // c.before()
+
+    // const out = { ...cg }
+    // c.moveDown(out)
+
+    // const a = { ...cg }
+    // c.moveDown(a)
+
+    // g.youtube(a)
+
+    // // c.moveSide(a)
+    // // g.mirror(a, { times: (Math.sin(c.t*.2)/2+.6)*4.5 })
+
+    // c.moveSide(a)
+    // g.pixelmess(a, { size: window.innerHeight/3/2 })
+
+    // c.moveSide(a)
+    // g.glitch(a)
+
+    // c.moveUp(out, a)
+
+
+    // const b = { ...cg }
+    // c.moveDown(b)
+
+    // g.webcam(b)
+
+    // // c.moveSide(b)
+    // // g.glitch(b)
+
+    // c.moveSide(b)
+    // g.pixelmess(b)
+
+    // c.moveSide(b)
+    // g.wobble(b)
+    // // g.wobble(b, { speed: 1 })
+    // // c.moveSide(b)
+    // // c.moveUp(cg, b)
+
+    // // c.moveSide(out)
+    // c.moveUp(out, b)
+    // // c.moveSide(out)
+    // // c.moveSide(b)
+
+    // c.moveUp(cg, out)
+  }
+
+  const stop = () => {
+    Object.values(sources).forEach(s => s.stop?.())
+    cancelAnimationFrame(animFrame)
+  }
+
+  const render = ms => {
+    t = shader.time = ms*0.001
+
+    tick()
+
+    shader.tick()
+
+    animFrame = requestAnimationFrame(render)
+  }
+
+  animFrame = requestAnimationFrame(render)
+
+  document.body.ondblclick = () => stop()
+}
+
+document.body.addEventListener('click', main, { once: true })
+
+</script>
+<textarea style="z-index:1000;position:absolute;"></textarea>
+</body>
+</html>

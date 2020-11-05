@@ -1,9 +1,11 @@
-
 export default c => ({
   buffers: [c.buffers.quad],
-  textures: {
-    'u_youtube': c.sources.youtube
-  },
+  textures: c => ({
+    'u_screen': c.sources.screen,
+  }),
+  draw: c => ({
+    'times': ['1f', c.times ?? 4]
+  }),
   vertex: `
     #version 300 es
 
@@ -15,28 +17,26 @@ export default c => ({
     out vec2 v_texCoord;
 
     void main () {
-      vec4 flip_xy = vec4(1.,-1.,1.,1.);
-      vec4 clip_pos = a_pos * flip_xy;
-
-      gl_Position = clip_pos;
-
+      gl_Position = a_pos;
       v_texCoord = a_st;
     }
   `,
   fragment: `
     #version 300 es
 
-    precision lowp sampler2DArray;
     precision lowp float;
 
-    uniform sampler2D u_youtube;
+    uniform sampler2D u_screen;
+
+    uniform float times;
 
     in vec2 v_texCoord;
 
     out vec4 fragColor;
 
     void main () {
-      fragColor = texture(u_youtube, v_texCoord);
+      vec4 col = texture(u_screen, v_texCoord/times);
+      fragColor = vec4(col.rgb,1.0);
     }
   `
 })
